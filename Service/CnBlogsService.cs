@@ -9,7 +9,7 @@ namespace ExportBlog
     internal class CnBlogsService : IFeedService
     {
         string url = null;
-        Regex reg_title = new Regex(@"href=""(http://www\.cnblogs\.com/.+?/(archive|articles)/.+?)"">([^<]+?)</a>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        Regex reg_title = new Regex(@"href=""(http://www\.cnblogs\.com/.+?/(p)/.+?)"">([^<]+?)</a>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         Regex reg_title2 = new Regex(@"<a id=""ctl01_lnkTitle""[^>]*?>(.+?)</a>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         Regex reg_con = new Regex(@"<div id=""cnblogs_post_body"">([\s\S]+)</div><div id=""MySignature"">", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -26,17 +26,19 @@ namespace ExportBlog
         {
             var list = new List<FeedEntity>();
 
-            int p = 0;
+            int totalPageCount = 0;
             for (int i = 1; i < 1000; i++)
             {
-                if (p > 0 && i > p) break;
+                if (totalPageCount > 0 && i > totalPageCount) break;
                 web.URL = string.Format(url, i);
                 string html = web.Get();
-                if (p == 0)
+                if (totalPageCount == 0)
                 {
                     var mp = Regex.Match(html, @"共(\d+)页");
-                    if (mp.Success) p = App.ToInt(mp.Groups[1].Value);
-                    else p = 1;
+                    if (mp.Success)
+                        totalPageCount = App.ToInt(mp.Groups[1].Value);
+                    else if (i > 1) // 如果在除首页外的其他页也没有找到分页控件。。。这可能是不存在的情况，。则就认为到此页就停了 
+                        totalPageCount = i;
                 }
                 var mats = reg_title.Matches(html);
                 if (mats.Count == 0) break;
